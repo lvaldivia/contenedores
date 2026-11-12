@@ -1,0 +1,25 @@
+# Archivos locales y secretos
+.env
+.env.*
+!.env.example
+node_modules/
+*.log
+tmp/
+
+# Estado y artefactos Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+infra/windows-ca.pem
+infra/deployment-outputs.json
+
+# Salidas específicas de cada despliegue (regenerar con Prepare-Ecs.ps1)
+backend/ecs/generated/*.json
+
+# Sistema y editor
+.DS_Store
+Thumbs.db

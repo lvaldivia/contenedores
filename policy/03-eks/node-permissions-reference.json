@@ -1,0 +1,63 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AmazonEKSWorkerNodePolicy1",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeInstances",
+        "ec2:DescribeInstanceTypes",
+        "ec2:DescribeRouteTables",
+        "ec2:DescribeSecurityGroups",
+        "ec2:DescribeSubnets",
+        "ec2:DescribeVolumes",
+        "ec2:DescribeVolumesModifications",
+        "ec2:DescribeVpcs",
+        "eks:DescribeCluster",
+        "eks-auth:AssumeRoleForPodIdentity"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ecr:GetAuthorizationToken",
+        "ecr:BatchGetImage",
+        "ecr:GetDownloadUrlForLayer",
+        "ecr:BatchImportUpstreamImage"
+      ],
+      "Resource": "*",
+      "Sid": "AmazonEC2ContainerRegistryPullOnly1"
+    },
+    {
+      "Sid": "AmazonEKSCNIPolicy1",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:AssignPrivateIpAddresses",
+        "ec2:AttachNetworkInterface",
+        "ec2:CreateNetworkInterface",
+        "ec2:DeleteNetworkInterface",
+        "ec2:DescribeInstances",
+        "ec2:DescribeTags",
+        "ec2:DescribeNetworkInterfaces",
+        "ec2:DescribeInstanceTypes",
+        "ec2:DescribeSubnets",
+        "ec2:DescribeSecurityGroups",
+        "ec2:DetachNetworkInterface",
+        "ec2:ModifyNetworkInterfaceAttribute",
+        "ec2:UnassignPrivateIpAddresses"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "AmazonEKSCNIPolicy2",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:CreateTags"
+      ],
+      "Resource": [
+        "arn:aws:ec2:*:*:network-interface/*"
+      ]
+    }
+  ]
+}

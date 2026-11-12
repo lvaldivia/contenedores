@@ -1,0 +1,17 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ConnectOnlyDemoSensor",
+      "Effect": "Allow",
+      "Action": "iot:Connect",
+      "Resource": "arn:aws:iot:us-east-1:299147769461:client/sensor-aula"
+    },
+    {
+      "Sid": "PublishTelemetryOnly",
+      "Effect": "Allow",
+      "Action": "iot:Publish",
+      "Resource": "arn:aws:iot:us-east-1:299147769461:topic/aula/telemetria"
+    }
+  ]
+}

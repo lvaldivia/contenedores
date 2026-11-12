@@ -1,0 +1,22 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowTelemetryRule",
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "iot.amazonaws.com"
+      },
+      "Action": "lambda:InvokeFunction",
+      "Resource": "arn:aws:lambda:us-east-1:299147769461:function:contenedores-iot-processor",
+      "Condition": {
+        "ArnLike": {
+          "AWS:SourceArn": "arn:aws:iot:us-east-1:299147769461:rule/contenedores_telemetria"
+        },
+        "StringEquals": {
+          "AWS:SourceAccount": "299147769461"
+        }
+      }
+    }
+  ]
+}

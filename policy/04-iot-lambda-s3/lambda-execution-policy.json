@@ -1,0 +1,20 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "WriteProcessedTelemetry",
+      "Effect": "Allow",
+      "Action": "s3:PutObject",
+      "Resource": "arn:aws:s3:::contenedores-iot-299147769461-us-east-1/telemetria/*"
+    },
+    {
+      "Sid": "WriteFunctionLogs",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": "arn:aws:logs:us-east-1:299147769461:log-group:/aws/lambda/contenedores-iot-processor:log-stream:*"
+    }
+  ]
+}

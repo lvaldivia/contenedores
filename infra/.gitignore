@@ -1,0 +1,9 @@
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+terraform.tfvars
+windows-ca.pem
+deployment-outputs.json
+crash.log
+*.log
