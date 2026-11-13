@@ -13,10 +13,18 @@ $pemBlocks = foreach ($cert in $certificates.Values) {
 $bundlePath = Join-Path $PSScriptRoot 'windows-ca.pem'
 [IO.File]::WriteAllText($bundlePath, ($pemBlocks -join "`n"), [Text.Encoding]::ASCII)
 $env:AWS_CA_BUNDLE = $bundlePath
-$env:AWS_PROFILE = 'luisvaldivia'
-$env:AWS_DEFAULT_REGION = 'us-east-1'
+$configPath = Join-Path $PSScriptRoot '../lab.config.json'
+if (Test-Path -LiteralPath $configPath) {
+    $config = Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json
+    $env:LAB_AWS_ACCOUNT_ID = $config.account_id
+    $env:LAB_AWS_PROFILE = $config.profile
+    $env:LAB_AWS_REGION = $config.region
+    $env:LAB_OPERATOR_ARN = $config.operator_arn
+}
+if ($env:LAB_AWS_PROFILE) { $env:AWS_PROFILE = $env:LAB_AWS_PROFILE }
+if ($env:LAB_AWS_REGION) { $env:AWS_DEFAULT_REGION = $env:LAB_AWS_REGION }
 
 # Only needed on this workstation if Terraform's local provider mTLS fails.
 # This affects Terraform-provider loopback RPC, not HTTPS verification to AWS.
 if ($LocalPluginTlsWorkaround) { $env:TF_DISABLE_PLUGIN_TLS = '1' }
-Write-Host 'AWS session: luisvaldivia / us-east-1. Certificate verification to AWS remains enabled.'
+Write-Host "AWS session: $env:AWS_PROFILE / $env:AWS_DEFAULT_REGION. Certificate verification to AWS remains enabled."

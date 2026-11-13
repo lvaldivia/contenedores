@@ -4,10 +4,10 @@ metadata:
   name: api-config
   namespace: contenedores
 data:
-  DB_HOST: contenedores-lab-mysql.cbw3qsdjtmk2.us-east-1.rds.amazonaws.com
+  DB_HOST: __DB_HOST__
   DB_PORT: "3306"
   DB_NAME: contenedores
   DB_SSL: "true"
-  DB_SSL_CA: /app/certs/rds-us-east-1-bundle.pem
+  DB_SSL_CA: /app/certs/rds-global-bundle.pem
   APP_ENV: eks
   APP_VERSION: v1

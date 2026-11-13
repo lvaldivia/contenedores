@@ -22,7 +22,7 @@
         "ecr:DescribeImages",
         "ecr:ListImages"
       ],
-      "Resource": "arn:aws:ecr:us-east-1:299147769461:repository/contenedores-api"
+      "Resource": "arn:aws:ecr:__REGION__:__ACCOUNT_ID__:repository/contenedores-api"
     }
   ]
 }

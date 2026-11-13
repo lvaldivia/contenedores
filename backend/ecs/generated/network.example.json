@@ -1,0 +1,12 @@
+{
+  "awsvpcConfiguration": {
+    "subnets": [
+      "__PRIVATE_SUBNET_1__",
+      "__PRIVATE_SUBNET_2__"
+    ],
+    "assignPublicIp": "DISABLED",
+    "securityGroups": [
+      "__ECS_SECURITY_GROUP_ID__"
+    ]
+  }
+}

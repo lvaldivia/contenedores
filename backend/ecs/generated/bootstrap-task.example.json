@@ -1,0 +1,87 @@
+{
+  "runtimePlatform": {
+    "operatingSystemFamily": "LINUX",
+    "cpuArchitecture": "X86_64"
+  },
+  "networkMode": "awsvpc",
+  "cpu": "256",
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "containerDefinitions": [
+    {
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-region": "__REGION__",
+          "awslogs-stream-prefix": "bootstrap",
+          "awslogs-group": "/ecs/contenedores-api"
+        }
+      },
+      "essential": true,
+      "name": "api",
+      "environment": [
+        {
+          "value": "__DB_HOST__",
+          "name": "DB_HOST"
+        },
+        {
+          "value": "3306",
+          "name": "DB_PORT"
+        },
+        {
+          "value": "contenedores",
+          "name": "DB_NAME"
+        },
+        {
+          "value": "true",
+          "name": "DB_SSL"
+        },
+        {
+          "value": "/app/certs/rds-global-bundle.pem",
+          "name": "DB_SSL_CA"
+        },
+        {
+          "value": "ecs",
+          "name": "APP_ENV"
+        },
+        {
+          "value": "__APP_VERSION__",
+          "name": "APP_VERSION"
+        }
+      ],
+      "portMappings": [
+        {
+          "protocol": "tcp",
+          "containerPort": 3000
+        }
+      ],
+      "command": [
+        "node",
+        "src/init-db.mjs"
+      ],
+      "secrets": [
+        {
+          "valueFrom": "__APP_SECRET_ARN__:username::",
+          "name": "DB_USER"
+        },
+        {
+          "valueFrom": "__APP_SECRET_ARN__:password::",
+          "name": "DB_PASSWORD"
+        },
+        {
+          "valueFrom": "__ADMIN_SECRET_ARN__:username::",
+          "name": "DB_ADMIN_USER"
+        },
+        {
+          "valueFrom": "__ADMIN_SECRET_ARN__:password::",
+          "name": "DB_ADMIN_PASSWORD"
+        }
+      ],
+      "image": "__IMAGE_URI__"
+    }
+  ],
+  "family": "contenedores-api-bootstrap",
+  "executionRoleArn": "arn:aws:iam::__ACCOUNT_ID__:role/contenedores-api-bootstrap-execution",
+  "memory": "512"
+}

@@ -1,7 +1,9 @@
 # Políticas por escenario
 
-Los archivos están preparados para la cuenta 299147769461 y us-east-1.
-No se aplicaron permisos en AWS. Las políticas de operador son complementarias;
+Para replicar en otra cuenta, completar primero [la configuración del alumno](../docs/ALUMNOS.md). Los marcadores `__ACCOUNT_ID__`, `__REGION__`, `__APP_SECRET_ARN__` y `__ADMIN_SECRET_ARN__` deben corresponder a esa cuenta. Los generadores ECS los completan; las políticas de operador son ejemplos para adaptar antes de adjuntarlos.
+
+Los archivos están preparados para la cuenta __ACCOUNT_ID__ y us-east-1.
+Los archivos describen permisos para recrear el laboratorio. Las políticas de operador son complementarias;
 no conceden permisos para crear toda la infraestructura, administrar IAM ni ejecutar Terraform.
 
 ## 01 ECR
@@ -32,6 +34,16 @@ compatibilidad y siguen siendo válidos como alternativa con la política admini
 `Prepare-Ecs.ps1` actualiza los permisos completos y los JSON originales con el ARN recibido.
 
 ## 03 EKS
+
+El cluster real `contenedores-eks` se creo finalmente con **Auto Mode**. Para
+operarlo seguir `../eks/README.md` y usar `../eks/auto-cluster-trust.json` como
+confianza del cluster (incluye sts:TagSession), junto con las cinco politicas
+administradas alli enumeradas. Los JSON de referencia de esta subcarpeta
+describen el recorrido anterior con managed node groups; no reemplazar con ellos
+la configuracion corregida de Auto Mode. La copia portable canonica del trust es
+`03-eks/auto-cluster-trust.json`. El nuevo recorrido de `scripts/lab.py eks` usa
+AmazonEKSWorkerNodeMinimalPolicy y AmazonEC2ContainerRegistryPullOnly para nodos
+Auto Mode; no requiere adjuntar AmazonEKS_CNI_Policy a ese rol.
 
 - Cluster: confianza `03-eks/cluster-trust.json`. Adjuntar **AmazonEKSClusterPolicy**.
   `cluster-permissions-reference.json` es una copia de referencia, no una política adicional necesaria.
@@ -69,7 +81,7 @@ Estos nombres son los previstos para una ampliación; estos recursos **no fueron
 | Topic MQTT | aula/telemetria |
 | Regla IoT | contenedores_telemetria |
 | Lambda | contenedores-iot-processor |
-| Bucket privado | contenedores-iot-299147769461-us-east-1 |
+| Bucket privado | contenedores-iot-__ACCOUNT_ID__-us-east-1 |
 | Prefijo de objetos | telemetria/ |
 | Rol Lambda sugerido | contenedores-iot-lambda-execution |
 
@@ -90,7 +102,7 @@ Estos nombres son los previstos para una ampliación; estos recursos **no fueron
 Comando para cuando existan Lambda y la regla, no ejecutado en esta entrega:
 
 ```powershell
-aws lambda add-permission --function-name contenedores-iot-processor --statement-id AllowTelemetryRule --action lambda:InvokeFunction --principal iot.amazonaws.com --source-arn arn:aws:iot:us-east-1:299147769461:rule/contenedores_telemetria --source-account 299147769461 --profile luisvaldivia --region us-east-1
+aws lambda add-permission --function-name contenedores-iot-processor --statement-id AllowTelemetryRule --action lambda:InvokeFunction --principal iot.amazonaws.com --source-arn arn:aws:iot:us-east-1:__ACCOUNT_ID__:rule/contenedores_telemetria --source-account __ACCOUNT_ID__ --profile $env:AWS_PROFILE --region $env:AWS_DEFAULT_REGION
 ```
 
 Configurar la regla con `SELECT * FROM 'aula/telemetria'`, acción Lambda sobre la

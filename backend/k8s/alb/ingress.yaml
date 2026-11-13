@@ -1,0 +1,49 @@
+apiVersion: eks.amazonaws.com/v1
+kind: IngressClassParams
+metadata:
+  name: alb-contenedores
+spec:
+  scheme: internet-facing
+  loadBalancerName: contenedores-eks-alb
+  ipAddressType: ipv4
+  targetType: ip
+  inboundCIDRs:
+    - __OPERATOR_CIDR__
+  subnets:
+    ids:
+      - __PUBLIC_SUBNET_1__
+      - __PUBLIC_SUBNET_2__
+---
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  name: alb-contenedores
+spec:
+  controller: eks.amazonaws.com/alb
+  parameters:
+    apiGroup: eks.amazonaws.com
+    kind: IngressClassParams
+    name: alb-contenedores
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: productos-api-public
+  namespace: contenedores
+  annotations:
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
+    alb.ingress.kubernetes.io/healthcheck-path: /health/ready
+    alb.ingress.kubernetes.io/healthcheck-port: traffic-port
+    alb.ingress.kubernetes.io/success-codes: '200'
+spec:
+  ingressClassName: alb-contenedores
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: productos-api
+                port:
+                  number: 80

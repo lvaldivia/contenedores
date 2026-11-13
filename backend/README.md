@@ -1,6 +1,6 @@
 # Backend de productos: Docker, MySQL y ECS
 
-Guia de consola desde el ingreso a AWS hasta ECS y EKS: [paso a paso](../GUIA-ECS-EKS.md).
+Primero completar la [configuración por alumno](../docs/ALUMNOS.md). Guía de despliegue ECS y EKS: [paso a paso](../GUIA-ECS-EKS.md).
 
 API Node.js 24 / Fastify. CRUD persistente en MySQL, consultas parametrizadas,
 validacion de entradas, Swagger UI y contrato OpenAPI exportable.
@@ -8,7 +8,7 @@ validacion de entradas, Swagger UI y contrato OpenAPI exportable.
 ## Ejecutar localmente
 
 ```powershell
-cd C:\Users\Luis\OneDrive\Documentos\demos\contenedores\backend
+cd backend
 Copy-Item .env.example .env  # Solo la primera vez; cambiar las claves locales si se desea.
 docker compose up -d --build
 docker compose ps
@@ -68,6 +68,54 @@ Para detener sin perder datos: `docker compose down`.
 
 ## Preparar despliegue en ECR / ECS
 
+### Linux: scripts Bash nativos
+
+El procedimiento Linux completo está en [docs/LINUX.md](../docs/LINUX.md).
+Estos scripts ejecutan AWS CLI directamente; no necesitan PowerShell ni Python.
+Requieren Bash >= 4, jq >= 1.6, AWS CLI v2, Terraform y Docker. Para EKS también
+kubectl. Desde la raíz, después de crear la red y RDS con Terraform:
+
+```bash
+source ./infra/Initialize-Session.sh
+bash scripts/ecs.sh secret
+bash scripts/ecs.sh image --version v1
+bash scripts/ecs.sh prepare --version v1
+bash scripts/ecs.sh bootstrap
+bash scripts/ecs.sh service --cidr 'TU_IPV4_PUBLICA/32'
+bash scripts/ecs.sh status
+```
+
+`prepare` genera JSON y configura roles/logs/tareas. Para **solo generar** los
+JSON, el equivalente de `Prepare-Ecs.ps1` es `Prepare-Ecs.sh`:
+
+```bash
+IMAGE_URI="${LAB_AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com/contenedores-api:v1"
+APP_SECRET_ARN="$(aws secretsmanager describe-secret --secret-id contenedores/api/mysql \
+  --profile "$AWS_PROFILE" --region "$AWS_DEFAULT_REGION" --query ARN --output text)"
+bash backend/scripts/Prepare-Ecs.sh \
+  --image-uri "$IMAGE_URI" --app-secret-arn "$APP_SECRET_ARN" --version v1
+```
+
+No repetir la generación manual si se ejecutará `ecs.sh prepare`; la etapa ya
+la incluye. Para publicar v2 ejecutar `image --version v2`, `prepare --version v2`
+y `bash scripts/ecs.sh update`. `service` es para primera instalación; `update`
+actualiza el servicio existente y espera estabilidad.
+
+Para sincronizar solo el secreto EKS, después de crear el clúster y namespace:
+
+```bash
+bash eks/Initialize-Eks.sh
+kubectl --context contenedores-eks apply -f backend/k8s/namespace.yaml
+bash backend/scripts/Sync-EksSecret.sh \
+  --app-secret-arn "$APP_SECRET_ARN" --context contenedores-eks
+```
+
+Este script valida contexto/cuenta y transmite credenciales por stdin. No las
+escribe en disco ni reinicia pods. El paso `bash scripts/eks.sh deploy --version v1`
+incluye ConfigMap actual, sincronización, Deployment, Service y espera de rollout.
+
+### Windows: procedimiento manual PowerShell
+
 Estos pasos son para la siguiente etapa y no se ejecutan automaticamente.
 La VPC y RDS existentes se leen del estado de `../infra`.
 
@@ -75,7 +123,7 @@ La VPC y RDS existentes se leen del estado de `../infra`.
 
 ```powershell
 . ../infra/Initialize-Session.ps1
-$account = '299147769461'
+$account = $env:LAB_AWS_ACCOUNT_ID
 $registry = "$account.dkr.ecr.us-east-1.amazonaws.com"
 $image = "${registry}/contenedores-api:v1"
 aws ecr create-repository --repository-name contenedores-api --image-scanning-configuration scanOnPush=true
@@ -98,6 +146,11 @@ Copiar su ARN, no su valor, y generar los archivos:
 ```
 
 El script solo genera JSON locales en `ecs/generated`:
+
+La carpeta también incluye `*.example.json` versionados con marcadores para
+cuenta, región, imagen, RDS, secretos y red. Ver [tabla de reemplazos y pasos
+manuales](ecs/generated/LEEME.md). Los JSON generados sin `.example` se ignoran
+porque corresponden a una ejecución concreta; los ejemplos sí van en el commit.
 
 - Runtime: credenciales de aplicacion, TLS a RDS y health check.
 - Bootstrap: comando de inicializacion, secreto administrador RDS y secreto de aplicacion.
@@ -152,7 +205,7 @@ Crear un ALB en las dos subredes publicas de `../infra`:
 - Configurar health check grace period de 60 segundos.
 
 Abrir `http://DNS_DEL_ALB/docs/` y crear/listar productos desde Swagger.
-Los contenedores siguen usando RDS por red privada y TLS con el CA regional de AWS.
+Los contenedores siguen usando RDS por red privada y TLS con el CA global de RDS.
 El CA publico se incluye en `certs/`; renovarlo desde el truststore de AWS cuando corresponda.
 
 Para la clase: consultar `/api/info`, detener una tarea y observar su reemplazo;

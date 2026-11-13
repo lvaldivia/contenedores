@@ -5,13 +5,13 @@
       "Sid": "DescribeLabCluster",
       "Effect": "Allow",
       "Action": "eks:DescribeCluster",
-      "Resource": "arn:aws:eks:us-east-1:299147769461:cluster/contenedores-eks"
+      "Resource": "arn:aws:eks:__REGION__:__ACCOUNT_ID__:cluster/contenedores-eks"
     },
     {
       "Sid": "ReadApplicationSecret",
       "Effect": "Allow",
       "Action": "secretsmanager:GetSecretValue",
-      "Resource": "arn:aws:secretsmanager:us-east-1:299147769461:secret:contenedores/api/mysql-??????"
+      "Resource": "arn:aws:secretsmanager:__REGION__:__ACCOUNT_ID__:secret:contenedores/api/mysql-??????"
     }
   ]
 }

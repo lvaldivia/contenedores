@@ -1,4 +1,6 @@
 output "region" { value = var.region }
+output "account_id" { value = var.account_id }
+output "profile" { value = var.profile }
 output "vpc_id" { value = aws_vpc.lab.id }
 output "availability_zones" { value = local.azs }
 output "public_subnet_ids" { value = aws_subnet.public[*].id }

@@ -1,6 +1,7 @@
 # Archivos locales y secretos
 .env
 .env.*
+lab.config.json
 !.env.example
 node_modules/
 *.log
@@ -17,8 +18,20 @@ tmp/
 infra/windows-ca.pem
 infra/deployment-outputs.json
 
+# Diagnosticos y confianza locales del cluster; conservar solo fuentes portables.
+eks/*.pem
+eks/*.cer
+eks/*-update.json
+eks/update-*.json
+eks/verification.json
+eks/mysql-network-check*.json
+eks/backups/
+__pycache__/
+*.pyc
+
 # Salidas específicas de cada despliegue (regenerar con Prepare-Ecs.ps1)
 backend/ecs/generated/*.json
+!backend/ecs/generated/*.example.json
 
 # Sistema y editor
 .DS_Store

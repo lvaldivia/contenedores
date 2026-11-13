@@ -1,0 +1,3 @@
+# Copiar a eks-auto.auto.tfvars solo cuando exista el cluster.
+# Obtener resourcesVpcConfig.clusterSecurityGroupId de aws eks describe-cluster.
+eks_auto_node_security_group_id = ""

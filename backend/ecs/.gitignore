@@ -1,1 +1,3 @@
-generated/
+# Versionar documentacion y ejemplos; ignorar salidas de cada despliegue.
+generated/*.json
+!generated/*.example.json

@@ -3,15 +3,16 @@
 Para usar los JSON organizados por escenario, consultar [ESCENARIOS.md](ESCENARIOS.md).
 Incluye políticas de ECR, ejecución ECS, roles y operador EKS y un anexo opcional IoT/Lambda/S3.
 
-Cuenta `299147769461`, region `us-east-1`.
+Cuenta y región propias de `lab.config.json`. Las políticas activas incluyen
+marcadores que deben completarse; los generadores ECS usan los valores actuales.
 Estos archivos son documentos JSON; crearlos no aplica cambios en AWS.
 
 | Rol | Politica de confianza | Politicas de permisos |
 | --- | --- | --- |
 | contenedores-api-runtime-execution | ecs-task-trust.json | AmazonECSTaskExecutionRolePolicy + ecs-runtime-secrets-policy.json inline |
 | contenedores-api-bootstrap-execution | ecs-task-trust.json | AmazonECSTaskExecutionRolePolicy + ecs-bootstrap-secrets-policy.json inline |
-| contenedores-eks-cluster-role | eks-cluster-trust.json | AmazonEKSClusterPolicy |
-| contenedores-eks-node-role | eks-node-trust.json | AmazonEKSWorkerNodePolicy + AmazonEC2ContainerRegistryPullOnly + AmazonEKS_CNI_Policy |
+| contenedores-eks-cluster-role | 03-eks/auto-cluster-trust.json | AmazonEKSClusterPolicy + AmazonEKSComputePolicy + AmazonEKSBlockStoragePolicyV2 + AmazonEKSLoadBalancingPolicy + AmazonEKSNetworkingPolicy |
+| contenedores-eks-node-role | 03-eks/node-trust.json | AmazonEKSWorkerNodeMinimalPolicy + AmazonEC2ContainerRegistryPullOnly |
 
 ## Donde pegar cada JSON
 
@@ -25,9 +26,10 @@ Estos archivos son documentos JSON; crearlos no aplica cambios en AWS.
 
 ## Secreto de aplicacion
 
-El secreto `contenedores/api/mysql` todavia no existia al preparar estos archivos.
-Las politicas iniciales autorizan exclusivamente ese nombre y su sufijo AWS de
-seis caracteres, usando `...:secret:contenedores/api/mysql-??????`.
+El secreto `contenedores/api/mysql` lo crea cada alumno. Sustituir
+`__APP_SECRET_ARN__` por su ARN real y `__ADMIN_SECRET_ARN__` por el output de RDS,
+o ejecutar prepare para generar esos valores. En las políticas de operador se
+puede restringir el nombre con el sufijo AWS de seis caracteres `-??????`.
 No contienen passwords ni permiten leer todos los secretos de la cuenta.
 Bootstrap incluye ademas el ARN exacto del secreto administrador de la RDS existente.
 

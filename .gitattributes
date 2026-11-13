@@ -1,0 +1,2 @@
+# Bash debe conservar LF incluso al clonar con Git para Windows.
+*.sh text eol=lf

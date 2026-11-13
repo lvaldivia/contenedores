@@ -15,7 +15,7 @@
         "ecr:GetDownloadUrlForLayer",
         "ecr:BatchGetImage"
       ],
-      "Resource": "arn:aws:ecr:us-east-1:299147769461:repository/contenedores-api"
+      "Resource": "arn:aws:ecr:__REGION__:__ACCOUNT_ID__:repository/contenedores-api"
     },
     {
       "Sid": "WriteContainerLogs",
@@ -24,14 +24,14 @@
         "logs:CreateLogStream",
         "logs:PutLogEvents"
       ],
-      "Resource": "arn:aws:logs:us-east-1:299147769461:log-group:/ecs/contenedores-api:log-stream:*"
+      "Resource": "arn:aws:logs:__REGION__:__ACCOUNT_ID__:log-group:/ecs/contenedores-api:log-stream:*"
     },
     {
       "Sid": "ReadDatabaseCredentials",
       "Effect": "Allow",
       "Action": "secretsmanager:GetSecretValue",
       "Resource": [
-        "arn:aws:secretsmanager:us-east-1:299147769461:secret:contenedores/api/mysql-??????"
+        "__APP_SECRET_ARN__"
       ]
     }
   ]

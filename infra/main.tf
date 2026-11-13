@@ -9,7 +9,7 @@ terraform {
 }
 
 provider "aws" {
-  allowed_account_ids = ["299147769461"]
+  allowed_account_ids = [var.account_id]
   region              = var.region
   profile             = var.profile
   default_tags {
@@ -23,7 +23,19 @@ variable "region" {
 }
 variable "profile" {
   type    = string
-  default = "luisvaldivia"
+  default = "default"
+}
+variable "account_id" {
+  description = "Cuenta propia del alumno; el proveedor bloquea cuentas distintas."
+  type        = string
+  validation {
+    condition     = can(regex("^[0-9]{12}$", var.account_id))
+    error_message = "account_id debe contener los 12 digitos de la cuenta AWS del alumno."
+  }
+}
+variable "mysql_engine_version" {
+  description = "Version regional comprobada por scripts/setup.sh o lab.py configure."
+  type        = string
 }
 variable "name" {
   type    = string
@@ -176,7 +188,7 @@ resource "aws_db_subnet_group" "mysql" {
 resource "aws_db_instance" "mysql" {
   identifier                  = "${var.name}-mysql"
   engine                      = "mysql"
-  engine_version              = "8.4.11"
+  engine_version              = var.mysql_engine_version
   instance_class              = "db.t4g.micro"
   allocated_storage           = 20
   max_allocated_storage       = 30

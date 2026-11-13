@@ -4,12 +4,16 @@ param(
   [string]$Version = 'v1'
 )
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot '../../infra/Initialize-Session.ps1')
 $infraPath = Join-Path $PSScriptRoot '../../infra'
 $raw = & terraform "-chdir=$infraPath" output -json
 if ($LASTEXITCODE -ne 0) { throw 'No se pudieron leer los outputs de infraestructura' }
 $infra = $raw | ConvertFrom-Json
 $account = ($infra.mysql_admin_secret_arn.value -split ':')[4]
 $region = $infra.region.value
+if ($account -ne $env:LAB_AWS_ACCOUNT_ID -or $region -ne $env:LAB_AWS_REGION) {
+  throw 'El estado Terraform no corresponde a la cuenta/region de lab.config.json.'
+}
 $out = Join-Path $PSScriptRoot '../ecs/generated'
 New-Item -ItemType Directory -Force $out | Out-Null
 $policyOut = Join-Path $PSScriptRoot '../../policy'
@@ -31,6 +35,17 @@ foreach ($kind in @('runtime','bootstrap')) {
   $scenarioPolicy = Join-Path $policyOut "02-ecs/$kind-execution-policy.json"
   if (Test-Path -LiteralPath $scenarioPolicy) {
     $complete = Get-Content -LiteralPath $scenarioPolicy -Raw | ConvertFrom-Json
+    foreach ($statement in $complete.Statement) {
+      $resources = @($statement.Resource | ForEach-Object {
+        if ($_ -match '^arn:aws:([^:]+):([^:]*):(?:[0-9]{12}|__ACCOUNT_ID__):(.*)$') {
+          $service = $Matches[1]; $resourceRegion = $Matches[2]; $resource = $Matches[3]
+          if ($resourceRegion) { $resourceRegion = $region }
+          "arn:aws:${service}:${resourceRegion}:${account}:$resource"
+        } else { $_ }
+      })
+      if ($statement.Resource -is [string]) { $statement.Resource = $resources[0] }
+      else { $statement.Resource = $resources }
+    }
     ($complete.Statement | Where-Object Sid -eq 'ReadDatabaseCredentials').Resource = $secretArns
     Save-Policy "02-ecs/$kind-execution-policy.json" $complete
   }
@@ -51,7 +66,7 @@ foreach ($kind in @('runtime','bootstrap')) {
       @{name='DB_PORT'; value='3306'},
       @{name='DB_NAME'; value=$infra.mysql_database.value},
       @{name='DB_SSL'; value='true'},
-      @{name='DB_SSL_CA'; value='/app/certs/rds-us-east-1-bundle.pem'},
+      @{name='DB_SSL_CA'; value='/app/certs/rds-global-bundle.pem'},
       @{name='APP_ENV'; value='ecs'},
       @{name='APP_VERSION'; value=$Version}
     )

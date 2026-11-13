@@ -1,67 +1,39 @@
-# Guía de despliegue ECS y EKS
+# Despliegue ECS y EKS: recorrido reproducible
 
-Comenzar por [README.md](README.md): ejecución local, preparación de AWS, Terraform y costos. Los comandos siguientes se ejecutan en PowerShell desde la raíz, salvo indicación contraria.
+La guía completa está en [README.md](README.md), con arquitectura, VPC, comandos PowerShell/Bash, Secrets Manager, SQL y explicación de cada YAML. Seguir un solo recorrido: el principal usa **EKS Auto Mode**, sin requerir managed node groups adicionales.
 
-## ECS
+Para Linux, la [guía Bash detallada](docs/LINUX.md) muestra instalación/requisitos, cada comando y sus resultados, los equivalentes nativos de los `.ps1`, recuperación de fallos, rotación, actualización y limpieza. Los scripts ECS/EKS Linux ejecutan AWS CLI directamente, sin Python ni PowerShell.
 
-Completar en orden las secciones de [ECR / ECS del backend](backend/README.md#preparar-despliegue-en-ecr--ecs): imagen ECR, secreto de aplicación, generación y registro de tareas, bootstrap y servicio con ALB. Antes de pasar a EKS, confirmar bootstrap con código 0 y disponibilidad de RDS. No se necesita mantener un servicio ECS activo para ejecutar EKS, pero sí inicializar la base.
+## Orden de ejecución
 
-## Crear el clúster EKS y los nodos
+| Paso | Windows PowerShell | Linux Bash | Comprobar antes de avanzar |
+| --- | --- | --- | --- |
+| Red/RDS | `cd infra`, sesión, `terraform init`, plan/apply | Mismos comandos Terraform | Outputs y RDS disponible |
+| App secret | `./scripts/lab.ps1 secret` | `bash scripts/ecs.sh secret` | ARN del secreto appuser |
+| Imagen | `./scripts/lab.ps1 image --version v1` | `bash scripts/ecs.sh image --version v1` | Imagen amd64 en ECR |
+| Roles/tareas | `./scripts/lab.ps1 prepare --version v1` | `bash scripts/ecs.sh prepare --version v1` | Roles y revisiones registradas |
+| SQL | `./scripts/lab.ps1 bootstrap` | `bash scripts/ecs.sh bootstrap` | STOPPED y exitCode=0 |
+| ECS público | `./scripts/lab.ps1 ecs --cidr 'TU_IPV4/32'` | `bash scripts/ecs.sh service --cidr 'TU_IPV4/32'` | Targets healthy y CRUD |
+| EKS | `./scripts/lab.ps1 eks --cidr 'TU_IPV4/32'` | `bash scripts/eks.sh create --cidr 'TU_IPV4/32'` | ACTIVE y Access entry |
+| Regla MySQL EKS | Plan/apply Terraform en infra | Plan/apply Terraform en infra | Regla 3306 desde SG real |
+| Pods | `./scripts/lab.ps1 deploy --version v1` | `bash scripts/eks.sh deploy --version v1` | Rollout y readiness |
+| Publicación opcional EKS | Editar/aplicar YAML ALB | `bash scripts/eks.sh publish-alb --cidr 'TU_IPV4/32'` | ADDRESS y targets healthy |
 
-Estos recursos no están implementados en Terraform. Crearlos desde la consola AWS con un operador autorizado:
+Ejecutar los wrappers desde la raíz; volver a ella después de trabajar en `infra`. Sustituir el CIDR por la IP pública real. Los pasos ECS y EKS son de primera instalación: ante fallo parcial inspeccionar AWS antes de repetirlos. Para detalle de parámetros, permisos, fallos, actualización y eliminación, consultar el README principal.
 
-1. Crear rol de clúster y rol de nodos según [policy/ESCENARIOS.md](policy/ESCENARIOS.md#03-eks). Usar sus políticas administradas indicadas.
-2. Crear un clúster llamado `contenedores-eks` en la VPC de `terraform -chdir=infra output vpc_id`, usando `app_private_subnet_ids`. Seleccionar una versión Kubernetes soportada por la cuenta/región y un modo de autenticación con Access entries.
-3. Configurar acceso al endpoint de Kubernetes: privado para los nodos y público restringido a la IP del operador para estos comandos desde la laptop. Con endpoint únicamente privado se requiere VPN u otro acceso a la VPC.
-4. Crear una Access entry para el principal IAM del operador y asociar `AmazonEKSClusterAdminPolicy` con alcance de clúster para este laboratorio. El permiso IAM para describir EKS no concede acceso a Kubernetes por sí solo.
-5. Crear un managed node group Linux x86_64 en las subredes privadas con el rol de nodos. Si se usa launch template para adjuntar `eks_security_group_id`, incluir también los grupos/reglas necesarios para comunicación entre nodos y control plane. RDS permite 3306 desde ese SG; adjuntarlo a las interfaces de los nodos. Este recorrido presupone VPC CNI normal, sin security groups por pod.
-6. Esperar clúster y nodos activos. Verificar complementos VPC CNI, CoreDNS y kube-proxy. Los nodos necesitan salida por NAT para descargar imágenes y acceder a servicios AWS.
+## Alternativa manual Windows
 
-## Conectar y aplicar la aplicación
+[backend/README.md](backend/README.md) conserva los pasos de generación manual de tareas ECS con `Prepare-Ecs.ps1`. Ese generador no crea servicios AWS. Para sincronizar solo el secreto EKS existe `Sync-EksSecret.ps1`; exige el contexto esperado y no reinicia pods. Ambos están explicados en el inventario de scripts del README.
 
-```powershell
-. ./infra/Initialize-Session.ps1
-aws eks update-kubeconfig --name contenedores-eks --region us-east-1 --profile luisvaldivia --alias contenedores-eks
-kubectl config current-context
-kubectl get nodes
-terraform -chdir=infra output mysql_host
+## Equivalentes manuales Linux
+
+```bash
+source ./infra/Initialize-Session.sh
+bash backend/scripts/Prepare-Ecs.sh --image-uri 'URI_REAL_ECR' --app-secret-arn 'ARN_REAL_APPUSER' --version v1
+bash eks/Initialize-Eks.sh
+bash backend/scripts/Sync-EksSecret.sh --app-secret-arn 'ARN_REAL_APPUSER' --context contenedores-eks
 ```
 
-Antes de aplicar, editar `backend/k8s/configmap.yaml` con el endpoint RDS devuelto por Terraform y `backend/k8s/deployment.yaml` con la imagen ECR publicada. No usar el endpoint de ejemplo si se creó una RDS nueva.
+El generador solo escribe JSON. La sincronización requiere que ya exista el namespace; no reinicia pods. No es necesario ejecutar estos comandos individuales si ya se usaron `ecs.sh prepare` y `eks.sh deploy`, que los incorporan.
 
-```powershell
-kubectl apply -f backend/k8s/namespace.yaml
-kubectl apply -f backend/k8s/configmap.yaml
-$appSecretArn = 'ARN_REAL_DEL_SECRETO_DE_APLICACION'
-./backend/scripts/Sync-EksSecret.ps1 -AppSecretArn $appSecretArn
-kubectl apply -f backend/k8s/deployment.yaml
-kubectl apply -f backend/k8s/service.yaml
-kubectl -n contenedores rollout status deployment/productos-api --timeout=180s
-kubectl -n contenedores get pods,svc
-kubectl -n contenedores port-forward service/productos-api 8080:80
-```
-
-Mantener `port-forward` activo y abrir <http://localhost:8080/docs/>. En otra terminal, probar `Invoke-RestMethod http://localhost:8080/health/ready` y el CRUD desde Swagger. Detener el túnel con Ctrl+C.
-
-El script lee Secrets Manager usando el perfil `luisvaldivia`, verifica el contexto `contenedores-eks` y transmite `DB_USER`/`DB_PASSWORD` a Kubernetes por stdin. No guardar su contenido en Git. El pod no necesita credenciales AWS. Los permisos del operador deben permitir leer ese secreto y crear/actualizar Secrets Kubernetes.
-
-## Publicar una versión y revisar fallos
-
-Después de construir y publicar una nueva etiqueta en ECR:
-
-```powershell
-$image = '299147769461.dkr.ecr.us-east-1.amazonaws.com/contenedores-api:v2'
-kubectl -n contenedores set image deployment/productos-api api=$image
-kubectl -n contenedores set env deployment/productos-api APP_VERSION=v2
-kubectl -n contenedores rollout status deployment/productos-api --timeout=180s
-kubectl -n contenedores logs deployment/productos-api --tail=100
-kubectl -n contenedores get events --sort-by=.metadata.creationTimestamp
-```
-
-Actualizar también los manifiestos versionados para conservar la imagen y `APP_VERSION` deseadas. Ante un fallo de publicación, `kubectl -n contenedores rollout undo deployment/productos-api` revierte el Deployment; no revierte cambios de datos ni del ConfigMap.
-
-Al rotar la contraseña: actualizar Secrets Manager, repetir bootstrap, ejecutar `Sync-EksSecret.ps1` y `kubectl -n contenedores rollout restart deployment/productos-api`. Comprobar luego el rollout y readiness.
-
-## Retirar el despliegue
-
-`kubectl delete -f backend/k8s/` elimina los objetos de aplicación, incluido su namespace y Secret; no elimina RDS. Retirar después node groups y clúster EKS desde AWS. Seguir la limpieza del [README principal](README.md#costos-y-limpieza) para los demás recursos.
+Las políticas de referencia de managed node groups en `policy/03-eks/` son material didáctico de otro modo de despliegue. No sustituir con ellas el trust ni los permisos Auto Mode. Antes de eliminar EKS quitar la referencia MySQL a su SG; antes de destruir Terraform retirar workloads, servicios y balanceadores externos.

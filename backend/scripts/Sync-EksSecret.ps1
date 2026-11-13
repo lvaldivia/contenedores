@@ -3,11 +3,15 @@ param(
   [string]$ExpectedContext = 'contenedores-eks'
 )
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot '../../infra/Initialize-Session.ps1')
 $current = & kubectl config current-context
 if ($LASTEXITCODE -ne 0 -or $current -ne $ExpectedContext) {
   throw "Selecciona primero el contexto Kubernetes '$ExpectedContext'. No se transfirio ningun secreto."
 }
-$raw = & aws secretsmanager get-secret-value --secret-id $AppSecretArn --query SecretString --output text --profile luisvaldivia --region us-east-1
+$identity = & aws sts get-caller-identity --profile $env:AWS_PROFILE --region $env:AWS_DEFAULT_REGION --output json
+if ($LASTEXITCODE -ne 0 -or ($identity | ConvertFrom-Json).Account -ne $env:LAB_AWS_ACCOUNT_ID) { throw 'Cuenta AWS incorrecta.' }
+if ($AppSecretArn -notlike "arn:aws:secretsmanager:$($env:LAB_AWS_REGION):$($env:LAB_AWS_ACCOUNT_ID):secret:contenedores/api/mysql-*") { throw 'ARN del secreto de aplicacion incorrecto.' }
+$raw = & aws secretsmanager get-secret-value --secret-id $AppSecretArn --query SecretString --output text --profile $env:AWS_PROFILE --region $env:AWS_DEFAULT_REGION
 if ($LASTEXITCODE -ne 0) { throw 'No se pudo leer el secreto de aplicacion.' }
 $credentials = $raw | ConvertFrom-Json
 if (-not $credentials.username -or -not $credentials.password) { throw 'El secreto debe contener username y password.' }

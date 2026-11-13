@@ -31,7 +31,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: api
-          image: 299147769461.dkr.ecr.us-east-1.amazonaws.com/contenedores-api:v1
+          image: __IMAGE_URI__
           imagePullPolicy: IfNotPresent
           ports:
             - name: http

@@ -1,0 +1,85 @@
+{
+  "runtimePlatform": {
+    "operatingSystemFamily": "LINUX",
+    "cpuArchitecture": "X86_64"
+  },
+  "networkMode": "awsvpc",
+  "cpu": "256",
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "containerDefinitions": [
+    {
+      "healthCheck": {
+        "retries": 3,
+        "command": [
+          "CMD-SHELL",
+          "node -e \"fetch('http://127.0.0.1:3000/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""
+        ],
+        "timeout": 6,
+        "interval": 30,
+        "startPeriod": 20
+      },
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-region": "__REGION__",
+          "awslogs-stream-prefix": "runtime",
+          "awslogs-group": "/ecs/contenedores-api"
+        }
+      },
+      "essential": true,
+      "name": "api",
+      "environment": [
+        {
+          "value": "__DB_HOST__",
+          "name": "DB_HOST"
+        },
+        {
+          "value": "3306",
+          "name": "DB_PORT"
+        },
+        {
+          "value": "contenedores",
+          "name": "DB_NAME"
+        },
+        {
+          "value": "true",
+          "name": "DB_SSL"
+        },
+        {
+          "value": "/app/certs/rds-global-bundle.pem",
+          "name": "DB_SSL_CA"
+        },
+        {
+          "value": "ecs",
+          "name": "APP_ENV"
+        },
+        {
+          "value": "__APP_VERSION__",
+          "name": "APP_VERSION"
+        }
+      ],
+      "portMappings": [
+        {
+          "protocol": "tcp",
+          "containerPort": 3000
+        }
+      ],
+      "secrets": [
+        {
+          "valueFrom": "__APP_SECRET_ARN__:username::",
+          "name": "DB_USER"
+        },
+        {
+          "valueFrom": "__APP_SECRET_ARN__:password::",
+          "name": "DB_PASSWORD"
+        }
+      ],
+      "image": "__IMAGE_URI__"
+    }
+  ],
+  "family": "contenedores-api-runtime",
+  "executionRoleArn": "arn:aws:iam::__ACCOUNT_ID__:role/contenedores-api-runtime-execution",
+  "memory": "512"
+}

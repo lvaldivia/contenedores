@@ -1,6 +1,6 @@
 # Red y MySQL para los laboratorios ECS / EKS
 
-Cuenta: `299147769461`. Perfil: `luisvaldivia`. Region: `us-east-1`.
+Cuenta, perfil y región: los indicados por cada alumno en `lab.config.json`. Ejecutar `scripts/setup.ps1` o `bash scripts/setup.sh` antes de Terraform. Ver [guía del alumno](../docs/ALUMNOS.md).
 Terraform administra exclusivamente los recursos de esta carpeta con estado local.
 El proveedor rechaza otras cuentas para evitar un despliegue accidental.
 
@@ -30,7 +30,7 @@ VPC 10.80.0.0/16
 
 ## MySQL
 
-RDS MySQL 8.4.11, `db.t4g.micro`, 20 GiB gp3 cifrados (autoscaling hasta 30 GiB).
+RDS MySQL 8.4 (versión regional comprobada por setup), `db.t4g.micro`, 20 GiB gp3 cifrados (autoscaling hasta 30 GiB).
 Base inicial: `contenedores`. Administrador: `labadmin`.
 Sin endpoint publico. RDS genera y administra la contrasena en Secrets Manager;
 Terraform entrega solo el ARN del secreto, nunca el valor de la contrasena.
@@ -61,7 +61,7 @@ El acceso AWS al secreto se configurara con identidad del workload en la siguien
 ## Operacion desde PowerShell
 
 ```powershell
-cd C:\Users\Luis\OneDrive\Documentos\demos\contenedores\infra
+cd infra
 . .\Initialize-Session.ps1 -LocalPluginTlsWorkaround
 aws sts get-caller-identity
 terraform init
@@ -80,6 +80,31 @@ En otro equipo se puede omitir el switch si el proveedor funciona normalmente.
 Guardar `terraform.tfstate` y su backup de forma segura; no subirlos a Git ni borrarlos.
 Se incluye `.terraform.lock.hcl` para fijar la version del proveedor.
 Los IDs y el endpoint se consultan con `terraform output`.
+
+## Operación desde Linux / Bash
+
+Desde la raíz, con AWS CLI v2 y Terraform instalados:
+
+```bash
+source ./infra/Initialize-Session.sh
+aws sts get-caller-identity --profile "$AWS_PROFILE"
+terraform -chdir=infra init
+terraform -chdir=infra fmt -check
+terraform -chdir=infra validate
+terraform -chdir=infra plan -out=lab.tfplan
+terraform -chdir=infra apply lab.tfplan
+terraform -chdir=infra output
+```
+
+`Initialize-Session.sh` se carga con `source` para exportar perfil/región en la
+terminal. No necesita PowerShell, no importa CA y no desactiva TLS del proveedor.
+Si existe `eks-auto.auto.tfvars` de una ejecución anterior, vaciar el SG eliminado
+antes de recrear. Después de crear EKS con `scripts/eks.sh create`, revisar/aplicar
+el plan que autoriza MySQL desde el SG real escrito por ese script.
+
+El [procedimiento Linux completo](../docs/LINUX.md) continúa con secreto appuser,
+ECR, roles/tareas ECS, bootstrap SQL y EKS. La red y la base no bastan para crear
+el usuario appuser: su secreto y el bootstrap son pasos separados.
 
 ## Costos y limpieza
 
